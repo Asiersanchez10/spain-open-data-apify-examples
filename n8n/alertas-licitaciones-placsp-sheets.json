@@ -1,0 +1,362 @@
+{
+  "name": "Alertas diarias de licitaciones PLACSP a Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Alertas diarias de licitaciones PLACSP → Google Sheets\n\nCada mañana (hora de Madrid) lanza el actor innovito/licitaciones-placsp, espera a que termine y añade las filas al final de una hoja.\n\n### Qué tienes que configurar\n1. Credencial HTTP Header Auth llamada **Apify API token**: nombre de cabecera `Authorization`, valor `Bearer TU_TOKEN` (consola de Apify → API tokens). No pongas el token en un nodo.\n2. Credencial de Google Sheets (OAuth de n8n).\n3. En **Configuración**, el ID de tu hoja y los filtros (CPV, comunidad, estado).\n\nFuente oficial: feed ATOM de datos abiertos de la Plataforma de Contratación del Sector Público. Este flujo no es un producto oficial de la Administración. Hay que citar la fuente. Precio del actor (nov 2026): 2,00 $ / 1.000 licitaciones + 0,00005 $ por arranque. Empieza con maxItems bajo.\n\nFicha: https://apify.com/innovito/licitaciones-placsp\nAPI de runs: https://docs.apify.com/api/v2/act-runs-post",
+        "height": 620,
+        "width": 420,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        -380
+      ],
+      "name": "Nota principal",
+      "id": "f2471bcc-e9ee-5859-86a9-90fd59fe91cc"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -200,
+        80
+      ],
+      "name": "Cada día laborable a las 8:00",
+      "id": "1845d8ad-8409-5cd2-a60b-df8ee7f8293e",
+      "notes": "Cron 0 8 * * 1-5. La zona horaria del flujo es Europe/Madrid."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "012ebcf1-1ec6-5214-9380-e5c63c85608e",
+              "name": "maxItems",
+              "value": 50,
+              "type": "number"
+            },
+            {
+              "id": "8fa0d7e5-54ef-5f5e-889b-a53aa0a54307",
+              "name": "maxPages",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "0ff468b9-6a39-5523-ab73-a8b2e29b212b",
+              "name": "statusCodes",
+              "value": "={{ ['PUB'] }}",
+              "type": "array"
+            },
+            {
+              "id": "4eb52783-1915-5432-9a6e-459b26481405",
+              "name": "cpvPrefixes",
+              "value": "={{ ['72'] }}",
+              "type": "array"
+            },
+            {
+              "id": "9a4e1157-d7af-5cc9-8a4a-0c6fd8573baa",
+              "name": "autonomousCommunities",
+              "value": "={{ ['Madrid'] }}",
+              "type": "array"
+            },
+            {
+              "id": "eb1e5d5b-24e9-5fa0-92dd-acf0f6f61135",
+              "name": "keywords",
+              "value": "={{ [] }}",
+              "type": "array"
+            },
+            {
+              "id": "91415140-8729-5223-87fc-7d22f55bce56",
+              "name": "spreadsheetId",
+              "value": "REEMPLAZA_CON_EL_ID_DE_TU_HOJA",
+              "type": "string"
+            },
+            {
+              "id": "a75dd773-5267-54cf-bfa3-2ab5b976401e",
+              "name": "sheetName",
+              "value": "Licitaciones",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        40,
+        80
+      ],
+      "name": "Configuración",
+      "id": "a904991f-accf-5160-bec9-73424ac4facd"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/innovito~licitaciones-placsp/runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "waitForFinish",
+              "value": "180"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ maxItems: $json.maxItems, maxPages: $json.maxPages, statusCodes: $json.statusCodes, cpvPrefixes: $json.cpvPrefixes, autonomousCommunities: $json.autonomousCommunities, keywords: $json.keywords }) }}",
+        "options": {
+          "timeout": 200000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        80
+      ],
+      "name": "Ejecutar actor PLACSP",
+      "id": "0bc39d13-4cad-5968-a653-369231efe2f7",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_APIFY_CREDENTIAL_ID",
+          "name": "Apify API token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        80
+      ],
+      "name": "Leer dataset del actor",
+      "id": "a465a4f7-dcfc-56a2-8f6f-3abbf40cb49d",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_APIFY_CREDENTIAL_ID",
+          "name": "Apify API token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Configuración').first().json;\nconst items = Array.isArray($json) ? $json : ($json.data || []);\nif (!items.length) {\n  return [];\n}\nreturn items.map((row) => ({\n  json: {\n    contractFolderId: row.contractFolderId || '',\n    status: row.status || row.statusCode || '',\n    title: row.title || '',\n    contractingAuthority: row.contractingAuthority || '',\n    estimatedValueEur: row.estimatedValueEur ?? '',\n    autonomousCommunity: row.autonomousCommunity || '',\n    submissionDeadline: row.submissionDeadline || '',\n    officialUrl: row.officialUrl || '',\n    sourceAttribution: row.sourceAttribution || '',\n    spreadsheetId: config.spreadsheetId,\n    sheetName: config.sheetName,\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        80
+      ],
+      "name": "Normalizar filas",
+      "id": "6ecb8237-b9cc-5887-863e-117b4db9cf09"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "43eb6d01-6883-5b3f-b763-62b335c3546d",
+              "leftValue": "={{ $json.spreadsheetId }}",
+              "rightValue": "REEMPLAZA_CON_EL_ID_DE_TU_HOJA",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        80
+      ],
+      "name": "¿Hoja configurada?",
+      "id": "e1d72aa7-b5aa-5ae1-b2c3-6278418c116f"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.spreadsheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $json.sheetName }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contractFolderId": "={{ $json.contractFolderId }}",
+            "status": "={{ $json.status }}",
+            "title": "={{ $json.title }}",
+            "contractingAuthority": "={{ $json.contractingAuthority }}",
+            "estimatedValueEur": "={{ $json.estimatedValueEur }}",
+            "autonomousCommunity": "={{ $json.autonomousCommunity }}",
+            "submissionDeadline": "={{ $json.submissionDeadline }}",
+            "officialUrl": "={{ $json.officialUrl }}",
+            "sourceAttribution": "={{ $json.sourceAttribution }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1360,
+        0
+      ],
+      "name": "Añadir a Google Sheets",
+      "id": "4cd32023-5d2e-5c32-901e-aaf754a79ff1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { aviso: 'Pon el ID real de tu hoja en Configuración (spreadsheetId) y vuelve a ejecutar. No se ha escrito nada en Google Sheets.' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        220
+      ],
+      "name": "Avisar que falta el ID de la hoja",
+      "id": "95b6804f-e17d-5408-985d-97f5edd7d223"
+    }
+  ],
+  "connections": {
+    "Cada día laborable a las 8:00": {
+      "main": [
+        [
+          {
+            "node": "Configuración",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuración": {
+      "main": [
+        [
+          {
+            "node": "Ejecutar actor PLACSP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar actor PLACSP": {
+      "main": [
+        [
+          {
+            "node": "Leer dataset del actor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer dataset del actor": {
+      "main": [
+        [
+          {
+            "node": "Normalizar filas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar filas": {
+      "main": [
+        [
+          {
+            "node": "¿Hoja configurada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hoja configurada?": {
+      "main": [
+        [
+          {
+            "node": "Añadir a Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avisar que falta el ID de la hoja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
